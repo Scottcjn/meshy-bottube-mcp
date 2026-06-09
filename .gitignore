@@ -1,0 +1,18 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Pipeline artifacts
+*.glb
+*.mp4
+frames/
+_render_*.py
+meshy_bottube_*/

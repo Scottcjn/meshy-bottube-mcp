@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meshy-bottube-mcp"
+version = "0.1.0"
+description = "MCP server: prompt -> Meshy.ai 3D -> Blender turntable -> BoTTube video"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Scott Boudreaux", email = "scottbphone12@gmail.com" }]
+keywords = ["mcp", "meshy", "3d", "bottube", "blender", "video", "ai-agents"]
+dependencies = [
+    "mcp>=1.2.0",
+    "requests>=2.31",
+]
+
+[project.urls]
+Homepage = "https://github.com/Scottcjn/meshy-bottube-mcp"
+Issues = "https://github.com/Scottcjn/meshy-bottube-mcp/issues"
+
+[project.scripts]
+meshy-bottube-mcp = "meshy_bottube.server:main"
+
+[tool.setuptools]
+packages = ["meshy_bottube"]
