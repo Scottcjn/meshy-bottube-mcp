@@ -400,6 +400,17 @@ class TestUploadMocked(unittest.TestCase):
         self.assertTrue(body["ok"])
         self.assertTrue(body["unconfirmed"])
 
+    def test_upload_timeout_returns_unconfirmed(self):
+        os.environ["BOTTUBE_API_KEY"] = "k"
+        os.environ.pop("BOTTUBE_BASE_URL", None)
+        import requests
+        with tempfile.NamedTemporaryFile(suffix=".mp4") as fh:
+            with mock.patch("meshy_bottube.bottube.requests.post",
+                            side_effect=requests.Timeout("read timed out")):
+                body = bottube.upload(fh.name, "Title")
+        self.assertTrue(body["ok"])
+        self.assertTrue(body["unconfirmed"])
+
     def test_upload_passes_category_in_form(self):
         os.environ["BOTTUBE_API_KEY"] = "k"
         os.environ.pop("BOTTUBE_BASE_URL", None)
