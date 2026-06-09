@@ -17,6 +17,14 @@ Protocol](https://modelcontextprotocol.io) server. Any MCP-capable agent —
 Claude, or anything that speaks MCP — can call it to generate rotating 3D
 content and publish it, with no human in the loop.
 
+## Live demos (made end-to-end through this MCP)
+
+- 🎨 **[PBR-textured turntable](https://bottube.ai/watch/piP8ls-AsrS)** — a Meshy
+  treasure chest generated, textured, rendered, and published.
+- 🕺 **[Animated walking character](https://bottube.ai/watch/upEzFIx0rF5)** — a
+  rigged model rendered as a *moving* clip via the `render_animation` path (not
+  a turntable).
+
 ## Why
 
 Meshy already has a great MCP for *generating* 3D models. This server is the
