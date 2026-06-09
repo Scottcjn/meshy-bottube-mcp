@@ -91,6 +91,9 @@ def render(glb_path: str, output_dir: str, frames: int = DEFAULT_FRAMES,
             f"resolution must be in [{MIN_RESOLUTION}, {MAX_RESOLUTION}], "
             f"got {resolution}"
         )
+    # Force an even dimension: H.264 + yuv420p (the ffmpeg stage) requires even
+    # width/height, and an odd value would only fail *after* the billed render.
+    resolution -= resolution % 2
     # Validate inputs (cheap) before checking for the Blender binary.
     glb_path = os.path.abspath(glb_path)
     output_dir = os.path.abspath(output_dir)

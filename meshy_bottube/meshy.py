@@ -64,7 +64,7 @@ def _create(payload: dict) -> str:
     if not isinstance(data, dict):
         raise MeshyError(f"Meshy returned unexpected JSON shape: {resp.text[:200]}")
     result = data.get("result")
-    if not result:
+    if not isinstance(result, str) or not result:
         raise MeshyError(f"Meshy did not return a task id: {resp.text[:200]}")
     return result
 
