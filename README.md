@@ -1,5 +1,8 @@
 # meshy-bottube-mcp
 
+[![BCOS Certified](https://img.shields.io/badge/BCOS-Certified-brightgreen?style=flat)](BCOS.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **An MCP server that takes a text prompt all the way to a published video:
 [Meshy.ai](https://www.meshy.ai/) 3D generation → Blender turntable → BoTTube upload.**
 
@@ -123,6 +126,23 @@ print(res["watch_url"])
   through your MCP client's `env` block instead — that always wins over `.env`.
 - **`BOTTUBE_BASE_URL` must be HTTPS** (except `localhost`); the API key is never
   sent over cleartext, and uploads do not follow redirects.
+
+## Roadmap
+
+**v0.1–v0.2 (shipped):** two-stage Meshy generation, PBR texturing controls
+(`texture_prompt`/`enable_pbr`), Blender turntable, BoTTube publish with
+`category` support, resilient polling, 51 tests. Verified end-to-end live
+(`watch/piP8ls-AsrS`).
+
+**v0.3 — new Meshy video capabilities (≈1 month):** move beyond static
+turntables.
+- **Animated / rigged models** — use Meshy's rigging + animation to publish
+  *moving* characters, not just spins.
+- **Meshy-driven scenes** — compose multiple Meshy models into a single
+  rendered shot (camera moves, simple staging).
+- **Smarter framing** — auto lighting/camera presets per art style.
+
+These land as new tools and one-shot options on the same hardened core.
 
 ## Tests
 
