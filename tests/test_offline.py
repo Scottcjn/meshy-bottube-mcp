@@ -67,6 +67,15 @@ class TestMeshyValidation(unittest.TestCase):
             else:
                 os.environ["MESHY_API_KEY"] = old
 
+    def test_refine_passes_texture_params(self):
+        with mock.patch.object(meshy, "_create", return_value="rid") as created:
+            meshy.create_refine_task("prev1", texture_prompt="mossy bronze",
+                                     enable_pbr=True)
+        payload = created.call_args.args[0]
+        self.assertEqual(payload["mode"], "refine")
+        self.assertTrue(payload["enable_pbr"])
+        self.assertEqual(payload["texture_prompt"], "mossy bronze")
+
     def test_generate_annotates_refine_id_on_download_failure(self):
         # When download fails post-refine, the error must name the refine task
         # id so the caller can re-fetch instead of paying again.
@@ -240,6 +249,22 @@ class TestWaitForTaskMocked(unittest.TestCase):
             with self.assertRaises(meshy.MeshyError):
                 meshy.wait_for_task("t", poll_interval=0, timeout=30)
 
+    def test_tolerates_transient_poll_failures(self):
+        # Two network blips then success — must recover, not abandon the wait.
+        seq = [meshy.MeshyError("blip"), meshy.MeshyError("blip2"),
+               {"status": "SUCCEEDED", "progress": 100}]
+        with mock.patch("meshy_bottube.meshy.get_task", side_effect=seq), \
+                mock.patch("meshy_bottube.meshy.time.sleep"):
+            status = meshy.wait_for_task("t", poll_interval=0, timeout=30)
+        self.assertEqual(status["status"], "SUCCEEDED")
+
+    def test_gives_up_after_too_many_failures(self):
+        with mock.patch("meshy_bottube.meshy.get_task",
+                        side_effect=meshy.MeshyError("network down")), \
+                mock.patch("meshy_bottube.meshy.time.sleep"):
+            with self.assertRaises(meshy.MeshyError):
+                meshy.wait_for_task("t", poll_interval=0, timeout=30)
+
     def test_progress_callback_fires(self):
         seq = [{"status": "IN_PROGRESS", "progress": 10},
                {"status": "SUCCEEDED", "progress": 100}]
@@ -303,6 +328,29 @@ class TestUploadMocked(unittest.TestCase):
                             return_value=resp):
                 with self.assertRaises(bottube.BoTTubeError):
                     bottube.upload(fh.name, "Title")
+
+    def test_upload_empty_body_returns_unconfirmed(self):
+        os.environ["BOTTUBE_API_KEY"] = "k"
+        os.environ.pop("BOTTUBE_BASE_URL", None)
+        resp = mock.MagicMock(status_code=200, text="")
+        with tempfile.NamedTemporaryFile(suffix=".mp4") as fh:
+            with mock.patch("meshy_bottube.bottube.requests.post",
+                            return_value=resp):
+                body = bottube.upload(fh.name, "Title")
+        self.assertTrue(body["ok"])
+        self.assertTrue(body["unconfirmed"])
+
+    def test_upload_passes_category_in_form(self):
+        os.environ["BOTTUBE_API_KEY"] = "k"
+        os.environ.pop("BOTTUBE_BASE_URL", None)
+        resp = mock.MagicMock(status_code=200,
+                              text='{"video_id":"v","watch_url":"/watch/v"}')
+        resp.json.return_value = {"video_id": "v", "watch_url": "/watch/v"}
+        with tempfile.NamedTemporaryFile(suffix=".mp4") as fh:
+            with mock.patch("meshy_bottube.bottube.requests.post",
+                            return_value=resp) as post:
+                bottube.upload(fh.name, "Title", category="comedy")
+        self.assertEqual(post.call_args.kwargs["data"].get("category"), "comedy")
 
     def test_upload_redirect_rejected(self):
         os.environ["BOTTUBE_API_KEY"] = "k"

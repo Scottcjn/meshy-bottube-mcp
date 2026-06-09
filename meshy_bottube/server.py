@@ -108,19 +108,24 @@ def _preflight(*, need_meshy: bool = False, need_blender: bool = False,
 
 @mcp.tool()
 def generate_3d_model(prompt: str, art_style: str = "realistic",
-                      should_remesh: bool = True, timeout: int = 600) -> dict:
+                      should_remesh: bool = True, texture_prompt: str = "",
+                      enable_pbr: bool = True, timeout: int = 600) -> dict:
     """Generate a 3D model from a text prompt via Meshy.ai (preview → refine).
 
     art_style: realistic | cartoon | low-poly | sculpture.
-    Blocks until the textured model is ready; returns its local .glb path and
-    both Meshy task ids. (Uses two Meshy generations: a preview and a refine.)
+    The refine stage TEXTURES the model: enable_pbr (default True) for PBR
+    textures, and texture_prompt for extra texturing guidance (e.g. "weathered
+    bronze, mossy"). Blocks until the textured model is ready; returns its local
+    .glb path and both Meshy task ids.
     """
     if timeout < 1:
         raise ValueError(f"timeout must be >= 1, got {timeout}")
     _preflight(need_meshy=True)
     out = os.path.join(_workdir(), "model.glb")
     return meshy.generate(prompt, out, art_style=art_style,
-                          should_remesh=should_remesh, timeout=timeout)
+                          should_remesh=should_remesh,
+                          texture_prompt=texture_prompt or None,
+                          enable_pbr=enable_pbr, timeout=timeout)
 
 
 @mcp.tool()
@@ -165,19 +170,22 @@ def prepare_video(video_path: str) -> dict:
 
 @mcp.tool()
 def upload_to_bottube(video_path: str, title: str, description: str = "",
-                      tags: str = "") -> dict:
-    """Upload a finished mp4 to BoTTube. tags is comma-separated.
+                      tags: str = "", category: str = "") -> dict:
+    """Upload a finished mp4 to BoTTube. tags is comma-separated; category is an
+    optional BoTTube category id (e.g. "comedy", "ai-art", "music").
 
     Note: this uploads whatever local file you point it at, under your own
     BoTTube API key — intentional, so you can publish videos made elsewhere."""
     _preflight(need_bottube=True)
-    return bottube.upload(video_path, title, description=description, tags=tags)
+    return bottube.upload(video_path, title, description=description, tags=tags,
+                          category=category)
 
 
 @mcp.tool()
 def meshy_to_bottube(prompt: str, title: str, description: str = "",
-                     tags: str = "3d,meshy,turntable",
+                     tags: str = "3d,meshy,turntable", category: str = "",
                      art_style: str = "realistic", should_remesh: bool = True,
+                     texture_prompt: str = "", enable_pbr: bool = True,
                      frames: int = 180, resolution: int = 720, fps: int = 30,
                      duration: int = 6, timeout: int = 600) -> dict:
     """One-shot: prompt -> Meshy 3D -> turntable -> video -> BoTTube upload.
@@ -230,7 +238,8 @@ def meshy_to_bottube(prompt: str, title: str, description: str = "",
         stage = "meshy"
         glb = meshy.generate(prompt, os.path.join(work, "model.glb"),
                              art_style=art_style, should_remesh=should_remesh,
-                             timeout=timeout)
+                             texture_prompt=texture_prompt or None,
+                             enable_pbr=enable_pbr, timeout=timeout)
         steps["glb_path"] = glb["glb_path"]
 
         stage = "turntable"
@@ -252,7 +261,8 @@ def meshy_to_bottube(prompt: str, title: str, description: str = "",
 
         stage = "upload"
         upload = bottube.upload(ready["output_path"], title,
-                                description=description, tags=tags)
+                                description=description, tags=tags,
+                                category=category)
         steps["upload"] = upload
         steps["watch_url"] = upload.get("watch_url")
         steps["watch_url_full"] = upload.get("watch_url_full") or upload.get("watch_url")

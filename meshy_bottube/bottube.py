@@ -78,8 +78,9 @@ def _add_full_watch_url(body: dict, base_url: str) -> dict:
 
 
 def upload(video_path: str, title: str, description: str = "",
-           tags: str = "") -> dict:
-    """Upload ``video_path`` to BoTTube. ``tags`` is a comma-separated string."""
+           tags: str = "", category: str = "") -> dict:
+    """Upload ``video_path`` to BoTTube. ``tags`` is a comma-separated string;
+    ``category`` is an optional BoTTube category id (e.g. "comedy", "ai-art")."""
     video_path = os.path.abspath(video_path)
     if not os.path.isfile(video_path):
         raise BoTTubeError(f"video file not found: {video_path}")
@@ -95,6 +96,9 @@ def upload(video_path: str, title: str, description: str = "",
     base = _base_url()
     url = f"{base}/api/upload"
     mime = _EXT_MIME[ext]
+    form = {"title": title, "description": description, "tags": tags}
+    if category:
+        form["category"] = category
     try:
         with open(video_path, "rb") as fh:
             # Size the OPEN handle (the one we upload) to close the TOCTOU race
@@ -108,7 +112,7 @@ def upload(video_path: str, title: str, description: str = "",
             resp = requests.post(
                 url,
                 headers={"X-API-Key": _api_key()},
-                data={"title": title, "description": description, "tags": tags},
+                data=form,
                 files={"video": (os.path.basename(video_path), fh, mime)},
                 timeout=_UPLOAD_TIMEOUT,
                 # Don't follow redirects: a cross-origin 3xx would resend the
@@ -128,10 +132,19 @@ def upload(video_path: str, title: str, description: str = "",
         raise BoTTubeError(
             f"upload failed (HTTP {resp.status_code}): {resp.text[:300]}"
         )
+    # BoTTube quirk: /api/upload sometimes returns an empty (or non-JSON) body
+    # on a 2xx even though the upload SUCCEEDED. Treat that as success-but-
+    # unconfirmed rather than failing — a naive failure here invites a retry
+    # that double-posts. Verify via GET /api/agents/<name> video_count.
+    if not (resp.text or "").strip():
+        return {"ok": True, "unconfirmed": True,
+                "note": "empty 2xx ack from BoTTube; verify via agent video_count"}
     try:
         body = resp.json()
     except ValueError:
-        raise BoTTubeError(f"upload returned non-JSON response: {resp.text[:300]}")
+        return {"ok": True, "unconfirmed": True,
+                "note": "non-JSON 2xx ack from BoTTube; verify via agent video_count",
+                "raw": resp.text[:200]}
     if not isinstance(body, dict):
         raise BoTTubeError(
             f"upload returned unexpected JSON shape: {str(body)[:300]}")
