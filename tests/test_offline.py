@@ -89,6 +89,66 @@ class TestMeshyValidation(unittest.TestCase):
         self.assertIn("ref42", str(ctx.exception))
 
 
+class TestImageInputs(unittest.TestCase):
+    def test_url_passthrough(self):
+        self.assertEqual(meshy.to_image_source("https://x/y.png"),
+                         "https://x/y.png")
+
+    def test_data_uri_passthrough(self):
+        uri = "data:image/png;base64,AAAA"
+        self.assertEqual(meshy.to_image_source(uri), uri)
+
+    def test_local_image_to_data_uri(self):
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as fh:
+            fh.write(b"\x89PNG\r\n\x1a\n" + b"realpngbody")  # valid PNG magic
+            path = fh.name
+        try:
+            uri = meshy.to_image_source(path)
+            self.assertTrue(uri.startswith("data:image/png;base64,"))
+        finally:
+            os.unlink(path)
+
+    def test_non_image_file_rejected(self):
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as fh:
+            fh.write(b"SECRET=hunter2\n")  # not an image despite .png name
+            path = fh.name
+        try:
+            with self.assertRaises(meshy.MeshyError):
+                meshy.to_image_source(path)
+        finally:
+            os.unlink(path)
+
+    def test_missing_file_rejected(self):
+        with self.assertRaises(meshy.MeshyError):
+            meshy.to_image_source("/no/such/file.png")
+
+    def test_endpoint_allowlist_blocks_foreign_host(self):
+        with self.assertRaises(meshy.MeshyError):
+            meshy.get_task("validtask", endpoint="https://evil.example.com/v1/x")
+
+    def test_multi_image_count_validated(self):
+        with self.assertRaises(meshy.MeshyError):
+            meshy.generate_from_images([], "/tmp/m.glb")
+        with self.assertRaises(meshy.MeshyError):
+            meshy.generate_from_images(["a", "b", "c", "d", "e"], "/tmp/m.glb")
+
+    def test_retexture_requires_source_and_style(self):
+        with self.assertRaises(meshy.MeshyError):
+            meshy.retexture("/tmp/m.glb", text_style_prompt="gold")  # no source
+        with self.assertRaises(meshy.MeshyError):
+            meshy.retexture("/tmp/m.glb", input_task_id="t")  # no style
+
+    def test_rig_requires_source(self):
+        with self.assertRaises(meshy.MeshyError):
+            meshy.rig()
+
+    def test_animate_validates_ids(self):
+        with self.assertRaises(meshy.MeshyError):
+            meshy.animate("../bad", 1, "/tmp/a.glb")
+        with self.assertRaises(meshy.MeshyError):
+            meshy.animate("validtask", -1, "/tmp/a.glb")
+
+
 class TestTurntableBounds(unittest.TestCase):
     def test_zero_frames_rejected(self):
         # Bounds are checked before the Blender lookup, so no Blender needed.

@@ -28,13 +28,20 @@ URL out.
 
 | Tool | Input | Output |
 |------|-------|--------|
-| `generate_3d_model` | prompt, art_style | `.glb` path + Meshy task ids (blocking, preview→refine) |
-| `get_meshy_task_status` | task_id | status / `.glb` path on success |
-| `render_turntable` | `.glb` | PNG frames (needs Blender) |
-| `frames_to_video` | frames dir | raw `.mp4` |
-| `prepare_video` | `.mp4` | BoTTube-ready `.mp4` (720×720, faststart) |
-| `upload_to_bottube` | `.mp4`, title | `video_id`, `watch_url` |
-| `meshy_to_bottube` | prompt, title | **one-shot full pipeline** → `ok`, `watch_url`, paths |
+| `generate_3d_model` | prompt, art_style | `.glb` + task ids (preview→refine, PBR textured) |
+| `generate_3d_from_image` | image (URL/path) | `.glb` from a single image |
+| `generate_3d_from_images` | 1–4 images | `.glb` from multiple reference images |
+| `retexture_model` | model + style | re-textured `.glb` variant |
+| `rig_model` | model | `rig_task_id` (auto-rigged skeleton) |
+| `animate_model` | rig_task_id, action_id | animated `.glb` (a motion from Meshy's library) |
+| `get_meshy_task_status` | task_id | status / `.glb` on success |
+| `render_turntable` | `.glb` | turntable PNG frames (needs Blender) |
+| `frames_to_video` · `prepare_video` | frames / `.mp4` | raw / BoTTube-ready `.mp4` |
+| `upload_to_bottube` | `.mp4`, title | `video_id`, `watch_url` (+ `category`) |
+| **`meshy_to_bottube`** | prompt | **one-shot:** text → 3D → turntable → published |
+| **`image_to_bottube`** | image | **one-shot:** image → 3D → turntable → published |
+| **`retexture_to_bottube`** | model + style | **one-shot:** re-texture → turntable → published |
+| **`animate_to_bottube`** | model, action_id | **one-shot:** rig → animate → render motion → published |
 
 ## Requirements
 
@@ -134,15 +141,18 @@ print(res["watch_url"])
 `category` support, resilient polling, 51 tests. Verified end-to-end live
 (`watch/piP8ls-AsrS`).
 
-**v0.3 — new Meshy video capabilities (≈1 month):** move beyond static
-turntables.
-- **Animated / rigged models** — use Meshy's rigging + animation to publish
-  *moving* characters, not just spins.
-- **Meshy-driven scenes** — compose multiple Meshy models into a single
-  rendered shot (camera moves, simple staging).
-- **Smarter framing** — auto lighting/camera presets per art style.
+**v0.3 (shipped):** the full Meshy modality set.
+- **Image-to-3D** and **multi-image-to-3D** — generate from photos, not just text.
+- **Retexture** — publish texture variants of one model.
+- **Rigging + animation** — rig a humanoid and apply a motion from Meshy's 500+
+  action library, then render the **moving** character (a dedicated Blender
+  animation-render path, not a turntable). This is the "moving video" goal.
 
-These land as new tools and one-shot options on the same hardened core.
+> Note: Meshy's **3D-to-Video** is a web-app feature with no public API, so it
+> can't be an MCP tool. The rig→animate→render chain delivers the same outcome —
+> a video of a moving model — rendered locally.
+
+**Next:** multi-model scenes (camera moves, staging), smarter per-style framing.
 
 ## Tests
 
