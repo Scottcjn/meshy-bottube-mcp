@@ -266,6 +266,8 @@ def meshy_to_bottube(prompt: str, title: str, description: str = "",
         steps["upload"] = upload
         steps["watch_url"] = upload.get("watch_url")
         steps["watch_url_full"] = upload.get("watch_url_full") or upload.get("watch_url")
+        if upload.get("unconfirmed"):
+            steps["unconfirmed"] = True
         steps["ok"] = True
         return steps
     except Exception as exc:  # noqa: BLE001 — orchestrator's contract is to
@@ -324,6 +326,8 @@ def _render_and_publish(work: str, glb_path: str, *, title: str,
     steps["upload"] = upload
     steps["watch_url"] = upload.get("watch_url")
     steps["watch_url_full"] = upload.get("watch_url_full") or upload.get("watch_url")
+    if upload.get("unconfirmed"):
+        steps["unconfirmed"] = True
     return upload
 
 
@@ -478,14 +482,15 @@ def rig_model(input_task_id: str = "", model_url: str = "",
 def animate_model(rig_task_id: str, action_id: int, fps: int = 30,
                   timeout: int = 600) -> dict:
     """Apply a motion to a rigged model -> animated .glb. action_id is from
-    Meshy's library (e.g. 0=Idle, 1=Walking, 4=Attack, 22=Dancing)."""
+    Meshy's library (e.g. 0=Idle, 1=Walking, 4=Attack, 22=Dancing).
+    fps must be one Meshy supports: 24, 25, 30, or 60."""
+    if fps not in (24, 25, 30, 60):
+        raise ValueError(f"fps must be one of 24, 25, 30, 60; got {fps}")
     if timeout < 1:
         raise ValueError(f"timeout must be >= 1, got {timeout}")
     _preflight(need_meshy=True)
     out = os.path.join(_workdir(), "anim.glb")
-    return meshy.animate(rig_task_id, action_id, out,
-                         fps=fps if fps in (24, 25, 30, 60) else None,
-                         timeout=timeout)
+    return meshy.animate(rig_task_id, action_id, out, fps=fps, timeout=timeout)
 
 
 @mcp.tool()
@@ -508,8 +513,10 @@ def animate_to_bottube(action_id: int, title: str, input_task_id: str = "",
         if not turntable.MIN_RESOLUTION <= resolution <= turntable.MAX_RESOLUTION:
             raise ValueError(f"resolution must be in [{turntable.MIN_RESOLUTION}, "
                              f"{turntable.MAX_RESOLUTION}], got {resolution}")
-        if fps < 1:
-            raise ValueError(f"fps must be >= 1, got {fps}")
+        if fps not in (24, 25, 30, 60):
+            # The encode fps + duration math must match what Meshy produces; it
+            # only converts to these values, so reject others up front.
+            raise ValueError(f"fps must be one of 24, 25, 30, 60; got {fps}")
         if not title or not title.strip():
             raise ValueError("title must be a non-empty string")
         if timeout < 1:
@@ -528,8 +535,7 @@ def animate_to_bottube(action_id: int, title: str, input_task_id: str = "",
         steps["rig_task_id"] = rigged["rig_task_id"]
         stage = "animation"
         anim = meshy.animate(rigged["rig_task_id"], action_id,
-                             os.path.join(work, "anim.glb"),
-                             fps=fps if fps in (24, 25, 30, 60) else None,
+                             os.path.join(work, "anim.glb"), fps=fps,
                              timeout=timeout)
         steps["glb_path"] = anim["glb_path"]
         stage = "render"
@@ -555,6 +561,8 @@ def animate_to_bottube(action_id: int, title: str, input_task_id: str = "",
         steps["upload"] = up
         steps["watch_url"] = up.get("watch_url")
         steps["watch_url_full"] = up.get("watch_url_full") or up.get("watch_url")
+        if up.get("unconfirmed"):
+            steps["unconfirmed"] = True
         steps["ok"] = True
         return steps
     except Exception as exc:  # noqa: BLE001 — one-shot always returns a dict

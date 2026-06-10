@@ -118,6 +118,17 @@ class TestImageInputs(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_mime_from_bytes_not_extension(self):
+        # JPEG bytes in a file named .png must be labeled image/jpeg.
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as fh:
+            fh.write(b"\xff\xd8\xff\xe0realjpegbody")  # JPEG magic
+            path = fh.name
+        try:
+            self.assertTrue(meshy.to_image_source(path).startswith(
+                "data:image/jpeg;base64,"))
+        finally:
+            os.unlink(path)
+
     def test_missing_file_rejected(self):
         with self.assertRaises(meshy.MeshyError):
             meshy.to_image_source("/no/such/file.png")
@@ -125,6 +136,11 @@ class TestImageInputs(unittest.TestCase):
     def test_endpoint_allowlist_blocks_foreign_host(self):
         with self.assertRaises(meshy.MeshyError):
             meshy.get_task("validtask", endpoint="https://evil.example.com/v1/x")
+
+    def test_animate_model_rejects_unsupported_fps(self):
+        from meshy_bottube import server
+        with self.assertRaises(ValueError):
+            server.animate_model("rigtask", 1, fps=29)
 
     def test_multi_image_count_validated(self):
         with self.assertRaises(meshy.MeshyError):
@@ -400,16 +416,27 @@ class TestUploadMocked(unittest.TestCase):
         self.assertTrue(body["ok"])
         self.assertTrue(body["unconfirmed"])
 
-    def test_upload_timeout_returns_unconfirmed(self):
+    def test_upload_readtimeout_returns_unconfirmed(self):
         os.environ["BOTTUBE_API_KEY"] = "k"
         os.environ.pop("BOTTUBE_BASE_URL", None)
         import requests
         with tempfile.NamedTemporaryFile(suffix=".mp4") as fh:
             with mock.patch("meshy_bottube.bottube.requests.post",
-                            side_effect=requests.Timeout("read timed out")):
+                            side_effect=requests.ReadTimeout("read timed out")):
                 body = bottube.upload(fh.name, "Title")
         self.assertTrue(body["ok"])
         self.assertTrue(body["unconfirmed"])
+
+    def test_upload_connecttimeout_still_raises(self):
+        # A connect timeout = nothing was uploaded -> hard failure, not "ok".
+        os.environ["BOTTUBE_API_KEY"] = "k"
+        os.environ.pop("BOTTUBE_BASE_URL", None)
+        import requests
+        with tempfile.NamedTemporaryFile(suffix=".mp4") as fh:
+            with mock.patch("meshy_bottube.bottube.requests.post",
+                            side_effect=requests.ConnectTimeout("no route")):
+                with self.assertRaises(bottube.BoTTubeError):
+                    bottube.upload(fh.name, "Title")
 
     def test_upload_passes_category_in_form(self):
         os.environ["BOTTUBE_API_KEY"] = "k"

@@ -119,14 +119,16 @@ def upload(video_path: str, title: str, description: str = "",
                 # X-API-Key header (and the upload) to another host.
                 allow_redirects=False,
             )
-    except requests.Timeout:
-        # BoTTube often finishes the upload server-side but is slow to ack, so a
-        # read timeout is ambiguous, not a clear failure. Treat it as
-        # success-but-unconfirmed (don't raise -> don't invite a double-post);
-        # verify via GET /api/agents/<name> video_count.
+    except requests.ReadTimeout:
+        # A READ timeout means the request was SENT and BoTTube is just slow to
+        # ack — it often finished the upload server-side. That's genuinely
+        # ambiguous, so don't raise (a retry would double-post); return
+        # success-but-unconfirmed and verify via GET /api/agents/<name>.
+        # (ConnectTimeout — connection never made, nothing uploaded — is NOT
+        # caught here; it falls through to the hard-error path below.)
         return {"ok": True, "unconfirmed": True,
-                "note": "upload timed out waiting for ack; the server may have "
-                        "completed it — verify via agent video_count"}
+                "note": "upload read-timeout waiting for ack; the server may "
+                        "have completed it — verify via agent video_count"}
     except requests.RequestException as exc:
         raise BoTTubeError(f"upload request failed: {exc}") from exc
 
