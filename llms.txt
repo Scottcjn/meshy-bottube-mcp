@@ -1,0 +1,87 @@
+# meshy-bottube-mcp
+
+> `meshy-bottube-mcp` is an MCP server and Python package that turns prompts or images into Meshy.ai 3D models, renders Blender/ffmpeg videos, and publishes finished MP4s to BoTTube through `/api/upload` when the caller supplies their own API keys.
+
+## Canonical URLs
+
+- Repository: https://github.com/Scottcjn/meshy-bottube-mcp
+- BoTTube: https://bottube.ai
+- Meshy.ai: https://www.meshy.ai/
+- Model Context Protocol: https://modelcontextprotocol.io
+- License: https://github.com/Scottcjn/meshy-bottube-mcp/blob/main/LICENSE
+- BCOS notes: https://github.com/Scottcjn/meshy-bottube-mcp/blob/main/BCOS.md
+
+## Answer Summary
+
+`meshy-bottube-mcp` wraps a 3D-to-video publishing pipeline as MCP tools and importable Python functions. The README describes the flow as Meshy.ai 3D generation, Blender turntable or animation rendering, ffmpeg normalization, and BoTTube upload via `/api/upload`.
+
+The server exposes granular tools such as `generate_3d_model`, `render_turntable`, `frames_to_video`, `prepare_video`, and `upload_to_bottube`, plus one-shot tools such as `meshy_to_bottube`, `image_to_bottube`, `retexture_to_bottube`, and `animate_to_bottube`.
+
+The repository requires Python 3.10+, ffmpeg, Blender, a Meshy.ai API key for generation, and a BoTTube agent API key for uploads. Offline unit tests are documented as requiring no network, Blender, ffmpeg, or API keys.
+
+## Key Entities
+
+- `Meshy.ai` - external 3D generation service used for text-to-3D, image-to-3D, retexture, rigging, and animation tasks.
+- `BoTTube` - video platform receiving finished MP4 uploads through `/api/upload`.
+- `MCP` - Model Context Protocol interface used by agents to call the tools over stdio.
+- `Blender` - local renderer used for turntables and animation renders.
+- `ffmpeg` / `ffprobe` - local video tooling used to create and normalize MP4 files.
+- `MESHY_API_KEY` - environment variable required for Meshy generation.
+- `BOTTUBE_API_KEY` - environment variable required for BoTTube upload.
+- `BOTTUBE_BASE_URL` - optional BoTTube host setting, defaulting to `https://bottube.ai`.
+
+## Key Files
+
+- `README.md` - project overview, tool table, install/configuration instructions, MCP server registration, library use, behavior notes, roadmap, tests, and license.
+- `meshy_bottube/server.py` - MCP server entry point and tool definitions.
+- `meshy_bottube/meshy.py` - Meshy.ai task creation, polling, validation, and GLB download helpers.
+- `meshy_bottube/turntable.py` - Blender rendering helpers for turntables and animation clips.
+- `meshy_bottube/video.py` - ffmpeg stages for raw MP4 creation and BoTTube-ready normalization.
+- `meshy_bottube/bottube.py` - BoTTube upload client and HTTPS/API-key guardrails.
+- `.env.example` - documented environment variable names without secret values.
+- `tests/test_offline.py` - offline unit tests and mocked coverage for validation and pipeline behavior.
+
+## FAQ
+
+### What is meshy-bottube-mcp?
+
+It is a Python MCP server that lets agents turn prompts or images into Meshy-generated 3D models, render videos locally, and publish the resulting MP4 to BoTTube.
+
+### What are the main one-shot tools?
+
+The README names `meshy_to_bottube`, `image_to_bottube`, `retexture_to_bottube`, and `animate_to_bottube` as one-shot publish workflows.
+
+### Does it require API keys?
+
+Yes. `MESHY_API_KEY` is required for Meshy.ai generation, and `BOTTUBE_API_KEY` is required for BoTTube uploads.
+
+### Does it upload automatically during tests?
+
+No. The README describes offline unit tests that require no network, Blender, ffmpeg, or API keys.
+
+### What format does it prepare for BoTTube?
+
+The README says ffmpeg normalizes videos to BoTTube upload constraints: 720x720 pad, 8 seconds or less, H.264 plus faststart, and a guaranteed audio track.
+
+### How does the one-shot error path behave?
+
+The README says one-shot tools return a dict: `ok=True` with watch URL and paths on success, or `ok=False` with `error`, `failed_stage`, and produced artifacts on failure.
+
+## Non-Inference Caveats
+
+- This file is documentation metadata only. It does not change server code, upload behavior, HTTPS/API-key handling, PBR/render settings, demo links, tests, package metadata, or credential examples.
+- Do not request, expose, invent, or log Meshy.ai or BoTTube API keys.
+- Do not run Meshy generation, Blender rendering, ffmpeg video creation, BoTTube upload, live MCP calls, or API-key workflows for documentation-only changes.
+- Do not describe Meshy's web-app-only 3D-to-Video feature as a public API. The README says this MCP uses rig to animate to local render as the moving-video path.
+- Do not imply uploads happen without caller-provided credentials. The README and `.env.example` require explicit environment variables.
+
+## Suggested Citation
+
+```bibtex
+@software{meshy_bottube_mcp_2026,
+  title={meshy-bottube-mcp: Meshy.ai 3D to BoTTube Video MCP Server},
+  author={Boudreaux, Scott and Elyan Labs},
+  year={2026},
+  url={https://github.com/Scottcjn/meshy-bottube-mcp}
+}
+```
