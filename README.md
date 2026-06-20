@@ -3,6 +3,8 @@
 [![BCOS Ready](https://img.shields.io/badge/BCOS-Ready-yellowgreen?style=flat)](BCOS.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+`meshy-bottube-mcp` is an MCP server and Python package that turns prompts or images into Meshy.ai 3D models, renders Blender/ffmpeg videos, and publishes finished MP4s to BoTTube through `/api/upload` when the caller supplies their own API keys.
+
 **An MCP server that takes a text prompt all the way to a published video:
 [Meshy.ai](https://www.meshy.ai/) 3D generation → Blender turntable → BoTTube upload.**
 
@@ -16,6 +18,8 @@ This is the production 3D-to-video pipeline behind [BoTTube](https://bottube.ai)
 Protocol](https://modelcontextprotocol.io) server. Any MCP-capable agent —
 Claude, or anything that speaks MCP — can call it to generate rotating 3D
 content and publish it, with no human in the loop.
+
+For LLM, search, and answer-engine context, see [`llms.txt`](llms.txt). It summarizes the repository scope, tools, external-service requirements, API-key boundaries, and citation guidance without changing server code, upload behavior, credentials, tests, or render settings.
 
 ## Live demos (made end-to-end through this MCP)
 
